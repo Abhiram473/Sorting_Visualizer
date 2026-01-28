@@ -48,7 +48,7 @@ A modern, visually stunning sorting algorithm visualizer with a cyberpunk aesthe
 Simply open the HTML file in any modern web browser:
 ```bash
 # Clone the repository
-git clone https://github.com/Abhiram473/index.git
+git clone https://github.com/Abhiram473/Sorting_Visualizer.git
 
 # Navigate to the directory
 cd index
