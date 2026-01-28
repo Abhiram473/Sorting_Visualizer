@@ -115,10 +115,6 @@ Contributions are welcome! Feel free to:
 - Fix bugs or optimize code
 - Improve documentation
 
-## 📝 License
-
-MIT License - feel free to use this project for educational purposes
-
 ## 🌟 Acknowledgments
 
 - Inspired by classic sorting visualizers with a modern twist
