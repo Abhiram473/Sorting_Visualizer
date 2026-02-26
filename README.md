@@ -2,7 +2,7 @@
 
 A modern, visually stunning sorting algorithm visualizer with a cyberpunk aesthetic. Watch 14 different sorting algorithms come to life with neon colors, smooth animations, and real-time statistics.
 
-![Sorting Visualizer](Sorting_Visualizer.png)
+![Sorting Visualizer](sortexe.png)
 
 ## 🎨 Features
 
