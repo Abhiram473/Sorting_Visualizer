@@ -21,6 +21,22 @@
             --sorted: #4ade80;
             --pivot: #fbbf24;
             --bar-default: #2a2a2a;
+            --label-color: #888;
+        }
+
+        [data-theme="light"] {
+            --bg: #f5f5f0;
+            --border: #d0d0c8;
+            --text: #1a1a1a;
+            --muted: #999;
+            --accent: #5a8a00;
+            --accent-dim: rgba(90, 138, 0, 0.1);
+            --comparing: #0284c7;
+            --swapping: #be185d;
+            --sorted: #16a34a;
+            --pivot: #d97706;
+            --bar-default: #c0c0b8;
+            --label-color: #555;
         }
 
         body {
@@ -65,6 +81,25 @@
             letter-spacing: 2px;
             text-transform: uppercase;
         }
+
+        /* ─── Theme toggle ─── */
+        .theme-toggle {
+            margin-left: auto;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 7px 14px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.72rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+        .theme-icon { font-size: 0.9rem; }
 
         /* ─── Controls ─── */
         .controls {
@@ -235,6 +270,7 @@
             display: flex;
             align-items: flex-end;
             gap: 1px;
+            padding-top: 24px;
         }
 
         .bar {
@@ -243,7 +279,24 @@
             transition: height 0.05s ease, background 0.05s;
             background: var(--bar-default);
             min-width: 1px;
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
         }
+
+        .bar-label {
+            position: absolute;
+            top: -18px;
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            color: var(--label-color);
+            white-space: nowrap;
+            display: none;
+            user-select: none;
+        }
+
+        .show-labels .bar-label { display: block; }
 
         .bar.comparing { background: var(--comparing); }
         .bar.swapping   { background: var(--swapping); }
@@ -324,6 +377,9 @@
     <header>
         <div class="logo">SORT<span class="logo-dot">.</span>EXE</div>
         <div class="tagline">Algorithm Visualizer</div>
+        <button class="theme-toggle" id="themeToggle">
+            <span class="theme-icon">☀️</span><span id="themeLabel">Light</span>
+        </button>
     </header>
 
     <div class="controls">
@@ -473,22 +529,29 @@ class SortingVisualizer {
     render(comparing = [], swapping = [], sorted = [], pivot = -1) {
         const bars = this.$canvas.querySelectorAll('.bar');
         this.array.forEach((val, i) => {
-            let bar = bars[i];
+            const bar = bars[i];
             if (!bar) return;
             bar.style.height = `${(val / 400) * 100}%`;
             bar.className = 'bar';
-            if (sorted.includes(i))       bar.classList.add('sorted');
-            else if (pivot === i)          bar.classList.add('pivot');
-            else if (swapping.includes(i)) bar.classList.add('swapping');
-            else if (comparing.includes(i))bar.classList.add('comparing');
+            const label = bar.querySelector('.bar-label');
+            if (label) label.textContent = val;
+            if (sorted.includes(i))        bar.classList.add('sorted');
+            else if (pivot === i)           bar.classList.add('pivot');
+            else if (swapping.includes(i))  bar.classList.add('swapping');
+            else if (comparing.includes(i)) bar.classList.add('comparing');
         });
     }
 
     _rebuildBars() {
         this.$canvas.innerHTML = '';
-        this.array.forEach(() => {
+        this.$canvas.classList.toggle('show-labels', this.arraySize <= 50);
+        this.array.forEach(val => {
             const bar = document.createElement('div');
             bar.className = 'bar';
+            const label = document.createElement('span');
+            label.className = 'bar-label';
+            label.textContent = val;
+            bar.appendChild(label);
             this.$canvas.appendChild(bar);
         });
         this.render();
@@ -731,6 +794,22 @@ class SortingVisualizer {
 window.addEventListener('DOMContentLoaded', () => {
     const viz = new SortingVisualizer();
     viz._rebuildBars();
+
+    // Theme toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const themeLabel  = document.getElementById('themeLabel');
+    themeToggle.addEventListener('click', () => {
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        if (isLight) {
+            document.documentElement.removeAttribute('data-theme');
+            themeToggle.querySelector('.theme-icon').textContent = '☀️';
+            themeLabel.textContent = 'Light';
+        } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            themeToggle.querySelector('.theme-icon').textContent = '🌙';
+            themeLabel.textContent = 'Dark';
+        }
+    });
 });
 </script>
 </body>
