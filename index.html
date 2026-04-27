@@ -26,6 +26,7 @@
 
         [data-theme="light"] {
             --bg: #f5f5f0;
+            --surface: #ffffff;
             --border: #d0d0c8;
             --text: #1a1a1a;
             --muted: #999;
@@ -218,6 +219,9 @@
         .btn-pause { border-color: var(--comparing); color: var(--comparing); }
         .btn-pause:hover:not(:disabled) { background: var(--comparing); color: #0d0d0d; }
 
+        .btn-cancel { border-color: #ef4444; color: #ef4444; }
+        .btn-cancel:hover:not(:disabled) { background: #ef4444; color: #0d0d0d; }
+
         .btn-reset { border-color: var(--border); color: var(--muted); }
         .btn-reset:hover:not(:disabled) { border-color: var(--text); color: var(--text); }
 
@@ -362,6 +366,125 @@
 
         .complexity-badge.visible { opacity: 1; }
 
+        /* ─── View Mode Toggle ─── */
+        .view-mode-bar {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            padding: 14px 0 0;
+        }
+        .view-mode-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-right: 6px;
+        }
+        .view-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 6px 14px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.72rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.15s;
+        }
+        .view-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .view-btn.active { background: var(--accent); border-color: var(--accent); color: #0d0d0d; font-weight: 700; }
+
+        /* ─── Array View ─── */
+        #arrayCanvas {
+            display: none;
+            flex-direction: column;
+            gap: 0;
+            width: 100%;
+            overflow-x: auto;
+            padding: 40px 0 20px;
+            position: relative;
+            min-height: 160px;
+        }
+        #arrayCanvas.active { display: flex; }
+        #canvas.hidden { display: none; }
+
+        .array-row {
+            display: flex;
+            align-items: stretch;
+            position: relative;
+        }
+
+        .array-cell {
+            min-width: 44px;
+            height: 44px;
+            border: 1.5px solid var(--border);
+            border-right: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text);
+            background: var(--surface);
+            position: relative;
+            transition: background 0.1s, color 0.1s, border-color 0.1s, transform 0.12s;
+            flex-shrink: 0;
+            user-select: none;
+        }
+        .array-cell:last-child { border-right: 1.5px solid var(--border); }
+        .array-cell.comparing {
+            background: var(--comparing);
+            color: #0d0d0d;
+            border-color: var(--comparing);
+        }
+        .array-cell.swapping {
+            background: var(--swapping);
+            color: #0d0d0d;
+            border-color: var(--swapping);
+            transform: translateY(-6px);
+        }
+        .array-cell.sorted {
+            background: var(--sorted);
+            color: #0d0d0d;
+            border-color: var(--sorted);
+        }
+        .array-cell.pivot {
+            background: var(--pivot);
+            color: #0d0d0d;
+            border-color: var(--pivot);
+        }
+
+        .index-row {
+            display: flex;
+        }
+        .array-index {
+            min-width: 44px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.58rem;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        /* ─── Pointer/Arrow layer ─── */
+        .pointer-layer {
+            position: relative;
+            height: 56px;
+            width: 100%;
+        }
+        .pointer-svg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            overflow: visible;
+            pointer-events: none;
+        }
+
         /* responsive */
         @media (max-width: 700px) {
             .controls { gap: 20px; }
@@ -401,8 +524,8 @@
         <div class="control-group">
             <div class="control-label">Array Size</div>
             <div class="slider-row">
-                <input type="range" id="sizeSlider" min="10" max="150" value="60">
-                <span class="slider-val" id="sizeVal">60</span>
+                <input type="range" id="sizeSlider" min="10" max="30" value="30">
+                <span class="slider-val" id="sizeVal">30</span>
             </div>
         </div>
 
@@ -421,6 +544,7 @@
             <div class="actions">
                 <button class="btn btn-start" id="startBtn">Start</button>
                 <button class="btn btn-pause" id="pauseBtn" disabled>Pause</button>
+                <button class="btn btn-cancel" id="cancelBtn" disabled>Cancel</button>
                 <button class="btn btn-reset" id="resetBtn">Reset</button>
             </div>
         </div>
@@ -452,7 +576,17 @@
 
     <!-- Visualization -->
     <div class="vis-wrap">
+        <div class="view-mode-bar">
+            <span class="view-mode-label">View</span>
+            <button class="view-btn active" id="viewBars">Bar Chart</button>
+            <button class="view-btn" id="viewArray">Array</button>
+        </div>
         <div id="canvas"></div>
+        <div id="arrayCanvas">
+            <div class="pointer-layer"><svg class="pointer-svg" id="pointerSvg"></svg></div>
+            <div class="array-row" id="arrayCells"></div>
+            <div class="index-row" id="arrayIndices"></div>
+        </div>
         <div class="legend">
             <div class="legend-item"><div class="legend-dot" style="background:#2a2a2a;border:1px solid #555"></div>Unsorted</div>
             <div class="legend-item"><div class="legend-dot" style="background:var(--comparing)"></div>Comparing</div>
@@ -473,12 +607,13 @@
 class SortingVisualizer {
     constructor() {
         this.array = [];
-        this.arraySize = 60;
+        this.arraySize = 30;
         this.speed = 40;
         this.selectedAlgo = null;
         this.selectedComplexity = null;
         this.sorting = false;
         this.paused = false;
+        this.cancelled = false;
         this.stats = { comparisons: 0, access: 0, startTime: 0 };
 
         this.$canvas    = document.getElementById('canvas');
@@ -488,6 +623,7 @@ class SortingVisualizer {
         this.$speedVal  = document.getElementById('speedVal');
         this.$startBtn  = document.getElementById('startBtn');
         this.$pauseBtn  = document.getElementById('pauseBtn');
+        this.$cancelBtn = document.getElementById('cancelBtn');
         this.$resetBtn  = document.getElementById('resetBtn');
 
         this._bindEvents();
@@ -516,6 +652,7 @@ class SortingVisualizer {
         });
         this.$startBtn.addEventListener('click', () => this.start());
         this.$pauseBtn.addEventListener('click', () => this.togglePause());
+        this.$cancelBtn.addEventListener('click', () => this.cancel());
         this.$resetBtn.addEventListener('click', () => this.reset());
     }
 
@@ -559,7 +696,11 @@ class SortingVisualizer {
 
     sleep(ms) {
         return new Promise(resolve => {
-            const tick = () => this.paused ? setTimeout(tick, 100) : setTimeout(resolve, ms);
+            const tick = () => {
+                if (this.cancelled) return resolve();
+                if (this.paused) return setTimeout(tick, 100);
+                setTimeout(resolve, ms);
+            };
             tick();
         });
     }
@@ -574,9 +715,11 @@ class SortingVisualizer {
         if (!this.selectedAlgo || this.sorting) return;
         this.sorting = true;
         this.paused = false;
+        this.cancelled = false;
         this.stats = { comparisons: 0, access: 0, startTime: Date.now() };
         this.$startBtn.disabled = true;
         this.$pauseBtn.disabled = false;
+        this.$cancelBtn.disabled = false;
         this.$resetBtn.disabled = true;
 
         const map = {
@@ -589,12 +732,15 @@ class SortingVisualizer {
             shell: () => this.shellSort(),
         };
         await map[this.selectedAlgo]();
+        if (this.cancelled) return this._finish();
         await this.showSortedWave();
+        if (this.cancelled) return this._finish();
         this._finish();
     }
 
     async showSortedWave() {
         for (let i = 0; i < this.array.length; i++) {
+            if (this.cancelled) return;
             this.render([], [], Array.from({ length: i + 1 }, (_, k) => k));
             await this.sleep(8);
         }
@@ -602,8 +748,11 @@ class SortingVisualizer {
 
     _finish() {
         this.sorting = false;
+        this.paused = false;
         this.$startBtn.disabled = false;
         this.$pauseBtn.disabled = true;
+        this.$pauseBtn.textContent = 'Pause';
+        this.$cancelBtn.disabled = true;
         this.$resetBtn.disabled = false;
         this.updateStats();
     }
@@ -613,12 +762,22 @@ class SortingVisualizer {
         this.$pauseBtn.textContent = this.paused ? 'Resume' : 'Pause';
     }
 
+    cancel() {
+        if (!this.sorting) return;
+        this.cancelled = true;
+        this.paused = false;
+        this.$pauseBtn.textContent = 'Pause';
+        this._finish();
+    }
+
     reset() {
         this.sorting = false;
         this.paused = false;
+        this.cancelled = false;
         this.$startBtn.disabled = false;
         this.$pauseBtn.disabled = true;
         this.$pauseBtn.textContent = 'Pause';
+        this.$cancelBtn.disabled = true;
         this.$resetBtn.disabled = false;
         this.stats = { comparisons: 0, access: 0, startTime: 0 };
         this.updateStats();
@@ -631,10 +790,13 @@ class SortingVisualizer {
     async bubbleSort() {
         const n = this.array.length;
         for (let i = 0; i < n - 1; i++) {
+            if (this.cancelled) return;
             for (let j = 0; j < n - i - 1; j++) {
+                if (this.cancelled) return;
                 this.stats.comparisons++; this.stats.access += 2;
                 this.render([j, j + 1]);
                 await this.sleep(this.speed);
+                if (this.cancelled) return;
                 if (this.array[j] > this.array[j + 1]) {
                     this.render([], [j, j + 1]);
                     await this.sleep(this.speed);
@@ -649,17 +811,21 @@ class SortingVisualizer {
     async selectionSort() {
         const n = this.array.length;
         for (let i = 0; i < n; i++) {
+            if (this.cancelled) return;
             let min = i;
             for (let j = i + 1; j < n; j++) {
+                if (this.cancelled) return;
                 this.stats.comparisons++; this.stats.access += 2;
                 this.render([min, j], [], Array.from({ length: i }, (_, k) => k));
                 await this.sleep(this.speed);
+                if (this.cancelled) return;
                 if (this.array[j] < this.array[min]) min = j;
                 this.updateStats();
             }
             if (min !== i) {
                 this.render([], [i, min], Array.from({ length: i }, (_, k) => k));
                 await this.sleep(this.speed);
+                if (this.cancelled) return;
                 [this.array[i], this.array[min]] = [this.array[min], this.array[i]];
                 this.stats.access += 4;
             }
@@ -669,12 +835,14 @@ class SortingVisualizer {
     async insertionSort() {
         const n = this.array.length;
         for (let i = 1; i < n; i++) {
+            if (this.cancelled) return;
             let key = this.array[i], j = i - 1;
             this.stats.access++;
             while (j >= 0 && this.array[j] > key) {
                 this.stats.comparisons++; this.stats.access += 2;
                 this.render([j, j + 1]);
                 await this.sleep(this.speed);
+                if (this.cancelled) return;
                 this.array[j + 1] = this.array[j];
                 this.stats.access += 2;
                 j--;
@@ -688,7 +856,7 @@ class SortingVisualizer {
     async mergeSort() { await this._mergeSplit(0, this.array.length - 1); }
 
     async _mergeSplit(l, r) {
-        if (l >= r) return;
+        if (this.cancelled || l >= r) return;
         const m = Math.floor((l + r) / 2);
         await this._mergeSplit(l, m);
         await this._mergeSplit(m + 1, r);
@@ -696,6 +864,7 @@ class SortingVisualizer {
     }
 
     async _merge(l, m, r) {
+        if (this.cancelled) return;
         const L = this.array.slice(l, m + 1);
         const R = this.array.slice(m + 1, r + 1);
         let i = 0, j = 0, k = l;
@@ -703,6 +872,7 @@ class SortingVisualizer {
             this.stats.comparisons++; this.stats.access += 2;
             this.render([l + i, m + 1 + j]);
             await this.sleep(this.speed);
+            if (this.cancelled) return;
             this.array[k++] = L[i] <= R[j] ? (i++, L[i - 1]) : (j++, R[j - 1]);
             this.stats.access++;
             this.updateStats();
@@ -714,13 +884,14 @@ class SortingVisualizer {
     async quickSort() { await this._quickSplit(0, this.array.length - 1); }
 
     async _quickSplit(lo, hi) {
-        if (lo >= hi) return;
+        if (this.cancelled || lo >= hi) return;
         const p = await this._partition(lo, hi);
         await this._quickSplit(lo, p - 1);
         await this._quickSplit(p + 1, hi);
     }
 
     async _partition(lo, hi) {
+        if (this.cancelled) return lo;
         const pivot = this.array[hi];
         this.stats.access++;
         let i = lo - 1;
@@ -728,10 +899,12 @@ class SortingVisualizer {
             this.stats.comparisons++; this.stats.access++;
             this.render([j], [], [], hi);
             await this.sleep(this.speed);
+            if (this.cancelled) return lo;
             if (this.array[j] < pivot) {
                 i++;
                 this.render([], [i, j], [], hi);
                 await this.sleep(this.speed);
+                if (this.cancelled) return lo;
                 [this.array[i], this.array[j]] = [this.array[j], this.array[i]];
                 this.stats.access += 4;
             }
@@ -744,10 +917,15 @@ class SortingVisualizer {
 
     async heapSort() {
         const n = this.array.length;
-        for (let i = Math.floor(n / 2) - 1; i >= 0; i--) await this._heapify(n, i);
+        for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+            if (this.cancelled) return;
+            await this._heapify(n, i);
+        }
         for (let i = n - 1; i > 0; i--) {
+            if (this.cancelled) return;
             this.render([], [0, i]);
             await this.sleep(this.speed);
+            if (this.cancelled) return;
             [this.array[0], this.array[i]] = [this.array[i], this.array[0]];
             this.stats.access += 4;
             await this._heapify(i, 0);
@@ -756,12 +934,14 @@ class SortingVisualizer {
     }
 
     async _heapify(n, i) {
+        if (this.cancelled) return;
         let largest = i, l = 2 * i + 1, r = 2 * i + 2;
         if (l < n) { this.stats.comparisons++; this.stats.access += 2; if (this.array[l] > this.array[largest]) largest = l; }
         if (r < n) { this.stats.comparisons++; this.stats.access += 2; if (this.array[r] > this.array[largest]) largest = r; }
         if (largest !== i) {
             this.render([], [i, largest]);
             await this.sleep(this.speed);
+            if (this.cancelled) return;
             [this.array[i], this.array[largest]] = [this.array[largest], this.array[i]];
             this.stats.access += 4;
             await this._heapify(n, largest);
@@ -772,13 +952,16 @@ class SortingVisualizer {
     async shellSort() {
         const n = this.array.length;
         for (let gap = Math.floor(n / 2); gap > 0; gap = Math.floor(gap / 2)) {
+            if (this.cancelled) return;
             for (let i = gap; i < n; i++) {
+                if (this.cancelled) return;
                 const temp = this.array[i]; this.stats.access++;
                 let j = i;
                 while (j >= gap && this.array[j - gap] > temp) {
                     this.stats.comparisons++; this.stats.access += 2;
                     this.render([j, j - gap]);
                     await this.sleep(this.speed);
+                    if (this.cancelled) return;
                     this.array[j] = this.array[j - gap];
                     this.stats.access += 2;
                     j -= gap;
@@ -790,10 +973,194 @@ class SortingVisualizer {
     }
 }
 
+// ─── Array + Pointer View ───
+class ArrayViewRenderer {
+    constructor(visualizer) {
+        this.viz = visualizer;
+        this.$cells   = document.getElementById('arrayCells');
+        this.$indices = document.getElementById('arrayIndices');
+        this.$svg     = document.getElementById('pointerSvg');
+        this.cellWidth = 44;
+        this.CELL_H    = 44;
+    }
+
+    // Decide cell width based on array size
+    _calcCellWidth() {
+        const n = this.viz.array.length;
+        if (n <= 20)  return 56;
+        if (n <= 40)  return 44;
+        if (n <= 70)  return 34;
+        if (n <= 100) return 26;
+        return 20;
+    }
+
+    rebuild() {
+        const n = this.viz.array.length;
+        this.cellWidth = this._calcCellWidth();
+        const cw = this.cellWidth;
+
+        // Cells
+        this.$cells.innerHTML = '';
+        this.$indices.innerHTML = '';
+        this.viz.array.forEach((val, i) => {
+            const cell = document.createElement('div');
+            cell.className = 'array-cell';
+            cell.style.minWidth = cw + 'px';
+            cell.style.fontSize = cw < 30 ? '0.6rem' : (cw < 40 ? '0.68rem' : '0.75rem');
+            cell.textContent = val;
+            this.$cells.appendChild(cell);
+
+            const idx = document.createElement('div');
+            idx.className = 'array-index';
+            idx.style.minWidth = cw + 'px';
+            // Show every index if small, else every N
+            const step = cw < 28 ? Math.ceil(n / 20) : 1;
+            idx.textContent = (i % step === 0) ? i : '';
+            this.$indices.appendChild(idx);
+        });
+        this._clearPointers();
+    }
+
+    render(comparing = [], swapping = [], sorted = [], pivot = -1, extraPointers = {}) {
+        const cells = this.$cells.querySelectorAll('.array-cell');
+        this.viz.array.forEach((val, i) => {
+            const cell = cells[i];
+            if (!cell) return;
+            cell.textContent = val;
+            cell.className = 'array-cell';
+            cell.style.minWidth = this.cellWidth + 'px';
+            cell.style.fontSize = this.cellWidth < 30 ? '0.6rem' : (this.cellWidth < 40 ? '0.68rem' : '0.75rem');
+            if (sorted.includes(i))        cell.classList.add('sorted');
+            else if (pivot === i)          cell.classList.add('pivot');
+            else if (swapping.includes(i)) cell.classList.add('swapping');
+            else if (comparing.includes(i) ) cell.classList.add('comparing');
+        });
+        this._drawPointers(comparing, swapping, pivot, extraPointers);
+    }
+
+    _clearPointers() { this.$svg.innerHTML = ''; }
+
+    _drawPointers(comparing, swapping, pivot, extra) {
+        this.$svg.innerHTML = '';
+        const cw   = this.cellWidth;
+        const svgH = 56;
+        const midY = svgH * 0.55;
+
+        const pointers = [];
+
+        // Comparing pointers (blue arrows, above)
+        comparing.forEach((idx, k) => {
+            pointers.push({ idx, color: 'var(--comparing)', label: k === 0 ? 'i' : 'j', side: 'top' });
+        });
+        // Swapping (pink)
+        swapping.forEach((idx, k) => {
+            pointers.push({ idx, color: 'var(--swapping)', label: k === 0 ? 'swap' : '↔', side: 'top' });
+        });
+        // Pivot
+        if (pivot >= 0) {
+            pointers.push({ idx: pivot, color: 'var(--pivot)', label: 'pivot', side: 'top' });
+        }
+        // Extra named pointers
+        Object.entries(extra).forEach(([label, idx]) => {
+            if (idx >= 0) pointers.push({ idx, color: 'var(--accent)', label, side: 'top' });
+        });
+
+        // Group by index to stack labels
+        const byIdx = {};
+        pointers.forEach(p => {
+            if (!byIdx[p.idx]) byIdx[p.idx] = [];
+            byIdx[p.idx].push(p);
+        });
+
+        Object.entries(byIdx).forEach(([rawIdx, pts]) => {
+            const idx = parseInt(rawIdx);
+            // center of cell
+            const cx = idx * cw + cw / 2;
+
+            pts.forEach((p, stack) => {
+                const arrowTipY = svgH; // touches top of cell row
+                const stemTopY  = arrowTipY - 18 - stack * 18;
+                const labelY    = stemTopY - 4;
+
+                // Vertical stem
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', cx); line.setAttribute('y1', stemTopY);
+                line.setAttribute('x2', cx); line.setAttribute('y2', arrowTipY - 6);
+                line.setAttribute('stroke', p.color);
+                line.setAttribute('stroke-width', '2');
+                this.$svg.appendChild(line);
+
+                // Arrowhead
+                const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                const ax = cx, ay = arrowTipY;
+                arrow.setAttribute('points', `${ax},${ay} ${ax-5},${ay-8} ${ax+5},${ay-8}`);
+                arrow.setAttribute('fill', p.color);
+                this.$svg.appendChild(arrow);
+
+                // Label
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', cx);
+                text.setAttribute('y', labelY);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('font-family', 'Space Mono, monospace');
+                text.setAttribute('font-size', '10');
+                text.setAttribute('fill', p.color);
+                text.setAttribute('font-weight', '700');
+                text.textContent = p.label;
+                this.$svg.appendChild(text);
+            });
+        });
+    }
+}
+
+// ─── Patch SortingVisualizer to support dual-mode rendering ───
+const _origRender = SortingVisualizer.prototype.render;
+SortingVisualizer.prototype.render = function(comparing = [], swapping = [], sorted = [], pivot = -1) {
+    _origRender.call(this, comparing, swapping, sorted, pivot);
+    if (this._arrayView && this._arrayViewMode) {
+        this._arrayView.render(comparing, swapping, sorted, pivot);
+    }
+};
+
+const _origRebuild = SortingVisualizer.prototype._rebuildBars;
+SortingVisualizer.prototype._rebuildBars = function() {
+    _origRebuild.call(this);
+    if (this._arrayView && this._arrayViewMode) {
+        this._arrayView.rebuild();
+        this._arrayView.render();
+    }
+};
+
 // Init after DOM ready
 window.addEventListener('DOMContentLoaded', () => {
     const viz = new SortingVisualizer();
     viz._rebuildBars();
+
+    // Array view renderer
+    const arrayView = new ArrayViewRenderer(viz);
+    viz._arrayView = arrayView;
+    viz._arrayViewMode = false;
+
+    // View mode buttons
+    const btnBars  = document.getElementById('viewBars');
+    const btnArray = document.getElementById('viewArray');
+    const $canvas  = document.getElementById('canvas');
+    const $arrCnv  = document.getElementById('arrayCanvas');
+
+    function switchView(mode) {
+        viz._arrayViewMode = mode === 'array';
+        btnBars.classList.toggle('active', mode === 'bars');
+        btnArray.classList.toggle('active', mode === 'array');
+        $canvas.classList.toggle('hidden', mode === 'array');
+        $arrCnv.classList.toggle('active', mode === 'array');
+        if (mode === 'array') {
+            arrayView.rebuild();
+            arrayView.render();
+        }
+    }
+
+    btnBars.addEventListener('click',  () => switchView('bars'));
+    btnArray.addEventListener('click', () => switchView('array'));
 
     // Theme toggle
     const themeToggle = document.getElementById('themeToggle');
